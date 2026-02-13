@@ -1,31 +1,61 @@
+require('dotenv').config();
 const express = require("express");
 const mongoose = require("mongoose");
-const User = require("./models/User");
+const cors = require("cors");
 
 const app = express();
+
+app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect("mongodb://127.0.0.1:27017/mydatabase")
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+// ROUTES (UNCHANGED)
+const serviceRoutes = require("./routes/serviceRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
-// Test route
+app.use("/api/services", serviceRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/contact", contactRoutes);
+
+// BASIC TEST ROUTE (UNCHANGED)
 app.get("/", (req, res) => {
-  res.send("Server is running 🚀");
+  res.send("API working ✅");
 });
 
-// Add user route
-app.post("/add-user", async (req, res) => {
+/* ==================================================
+   ✅ EMAIL DEBUG TEST ROUTE (SAFE – TEMPORARY)
+   DOES NOT TOUCH EXISTING BOOKING LOGIC
+================================================== */
+app.get("/test-email", async (req, res) => {
   try {
-    const user = new User(req.body);
-    await user.save();
-    res.send("User saved successfully ✅");
-  } catch (error) {
-    res.status(500).send("Error saving user");
+    const { sendConfirmEmail } = require("./utils/sendBookingEmail");
+
+    await sendConfirmEmail(
+      "test@gmail.com", // replace with your email for testing
+      {
+        name: "Test User",
+        service: "Hair Cut",
+        date: "Today",
+        time: "5 PM",
+      }
+    );
+
+    res.send("Test email sent ✅ Check inbox");
+  } catch (err) {
+    console.error("❌ Email test failed:", err);
+    res.status(500).send("Email failed ❌");
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+// DB
+mongoose
+  .connect("mongodb://127.0.0.1:27017/salon")
+  .then(() => console.log("MongoDB Connected ✅"))
+  .catch(err => console.error("MongoDB error:", err));
+
+// SERVER
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log("EMAIL USER:", process.env.EMAIL_USER ? "Loaded ✅" : "Missing ❌");
 });
